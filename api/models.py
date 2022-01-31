@@ -1,11 +1,12 @@
 from django.db import models
-
+from dateutil.relativedelta import relativedelta
+from datetime import date
 from .validators import validate_positive
 
 
 GENDER_CHOICES = (
-    ('MALE', 'male'),
-    ('FEMALE', 'female'),
+    ('MALE', 'мужской'),
+    ('FEMALE', 'женский'),
 )
 
 
@@ -24,7 +25,7 @@ class Product(models.Model):
         return self.name
 
 
-class Object(models.Model):
+class Reservoir(models.Model):
     name = models.CharField('Наименование резервуара', max_length=200,)
     capacity = models.PositiveIntegerField(
         'Ёмкость',
@@ -51,10 +52,10 @@ class Provider(models.Model):
 
 
 class Batch(models.Model):
-    products = models.ForeignKey(
+    product = models.ForeignKey(
         Product,
         on_delete=models.CASCADE,
-        related_name='products',
+        related_name='batches',
         verbose_name='Продукт',)
     number = models.PositiveIntegerField(
         'Номер',
@@ -65,25 +66,56 @@ class Batch(models.Model):
         'Тоннаж',
         validators=[validate_positive],
         )
-    provider = models.CharField('Провайдер', max_length=200,)
+    provider = models.ForeignKey(
+        Provider,
+        on_delete=models.CASCADE,
+        related_name='batches',
+        verbose_name='Поставщик',
+        )
     volume = models.PositiveIntegerField(
         'Объём',
         validators=[validate_positive],
         )
-    objects = models.ForeignKey(
-        Object,
+    reservoir = models.ForeignKey(
+        Reservoir,
         on_delete=models.CASCADE,
-        related_name='objects',
-        verbose_name='Резервуар',)
-    density = 
-    shift_accepted = 
+        related_name='batches',
+        verbose_name='Резервуар',
+        )
+    density = models.IntegerField('Плотность', editable=False)
+    shift_accepted = models.CharField('Принявшая смена', max_length=200,)
+
+    class Meta:
+        verbose_name = 'Партия'
+        verbose_name_plural = 'Партии'
+    
+    @property
+    def get_density(self):
+        return self.volume / self.tonnage
+
+    def save(self, *args, **kwargs):
+        self.density = self.get_density
+        super(Batch, self).save(*args, **kwargs)
+    
+    def __str__(self):
+        return f'Номер {self.number}'
 
 
 class Employee(models.Model):
-    full_name = models.CharField(
-        'ФИО',
+    last_name = models.CharField(
+        'Фамилия',
         max_length=200,
-        help_text='Введите ФИО сотрудника'
+        help_text='Введите фамилию сотрудника'
+        )
+    first_name = models.CharField(
+        'Имя',
+        max_length=200,
+        help_text='Введите имя сотрудника'
+        )
+    third_name = models.CharField(
+        'Отчество',
+        max_length=200,
+        help_text='Введите отчество сотрудника'
         )
     date_of_employment = models.DateField('Дата устройства на работу',)
     date_of_dismissal = models.DateField(
@@ -92,19 +124,34 @@ class Employee(models.Model):
         null=True,
         )
     gender = models.CharField(
+        'Пол',
         max_length=6,
         choices=GENDER_CHOICES,
-        default="MALE",
+        default="мужской",
         )
-    experience = 
-    date_of_birth = models.DateField('Дата рождения',)
+    experience = models.IntegerField('Опыт', editable=False)
+    birth_date = models.DateField('Дата рождения',)
 
     class Meta:
         verbose_name = 'Сотрудник'
         verbose_name_plural = 'Сотрудники'
 
+    @property
+    def get_experience(self):
+        if self.date_of_dismissal is None:
+            return relativedelta(date.today(), self.date_of_employment).years
+        else:
+            return relativedelta(
+                self.date_of_dismissal,
+                self.date_of_employment
+                ).years
+
+    def save(self, *args, **kwargs):
+        self.experience = self.get_experience
+        super(Employee, self).save(*args, **kwargs)
+
     def __str__(self):
-        return self.full_name
+        return f'{self.last_name} {self.first_name}'
 
 
 class Shift(models.Model):
@@ -113,15 +160,15 @@ class Shift(models.Model):
         related_name='employees',
         verbose_name='Сотрудник',
         )
-    batchs = models.ForeignKey(
+    batch = models.ForeignKey(
         Batch,
         on_delete=models.CASCADE,
-        related_name='batchs',
+        related_name='shifts',
         verbose_name='Партии',
         )
     date_of_delivery = models.DateTimeField('Дата и время начала смены',)
-    begin_vol_of_prod =
-    end_delta_vol_of_prod =
+    # begin_vol_of_prod = 
+    # end_delta_vol_of_prod =
 
     class Meta:
         verbose_name = 'Смена'
@@ -137,9 +184,10 @@ class Sale(models.Model):
     shift = models.ForeignKey(
         Shift,
         on_delete=models.CASCADE,
-        related_name='shifts',
-        verbose_name='Смены',
+        related_name='sales',
+        verbose_name='Смена',
         )
 
     class Meta:
         verbose_name = 'Продажа'
+        verbose_name_plural = 'Продажи'
