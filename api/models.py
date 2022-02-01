@@ -61,7 +61,10 @@ class Batch(models.Model):
         'Номер',
         validators=[validate_positive],
         )
-    date_of_delivery = models.DateTimeField('Дата и время поставки',)
+    date_of_delivery = models.DateTimeField(
+        'Дата и время поставки',
+        auto_now_add=True,
+        )
     tonnage = models.PositiveIntegerField(
         'Тоннаж',
         validators=[validate_positive],
@@ -82,18 +85,28 @@ class Batch(models.Model):
         related_name='batches',
         verbose_name='Резервуар',
         )
-    density = models.IntegerField('Плотность', editable=False)
-    shift_accepted = models.CharField('Принявшая смена', max_length=200,)
+    density = models.FloatField('Плотность', editable=False)
+    shift_accepted = models.PositiveIntegerField(
+        'Принявшая смена',
+        editable=False,
+        )
 
     class Meta:
         verbose_name = 'Партия'
         verbose_name_plural = 'Партии'
-    
+
+    @property
+    def get_shift_accepted(self):
+        last_object = Shift.objects.latest('date_of_beginning')
+        print(f'Что на выходе {last_object}')
+        return last_object.id
+
     @property
     def get_density(self):
         return self.volume / self.tonnage
 
     def save(self, *args, **kwargs):
+        self.shift_accepted = self.get_shift_accepted
         self.density = self.get_density
         super(Batch, self).save(*args, **kwargs)
     
@@ -158,21 +171,40 @@ class Shift(models.Model):
     employees = models.ManyToManyField(
         Employee,
         related_name='employees',
-        verbose_name='Сотрудник',
+        verbose_name='Сотрудники',
         )
     batch = models.ForeignKey(
         Batch,
         on_delete=models.CASCADE,
         related_name='shifts',
-        verbose_name='Партии',
+        verbose_name='Партия',
         )
-    date_of_delivery = models.DateTimeField('Дата и время начала смены',)
-    # begin_vol_of_prod = 
-    # end_delta_vol_of_prod =
+    date_of_beginning = models.DateTimeField(
+        'Дата и время начала смены',
+        auto_now_add=True,
+        )
+    end_date = models.DateTimeField(
+        'Дата и время конца смены',
+        blank=True,
+        null=True
+        )
+    begin_vol_of_prod = models.FloatField(
+        'Объем продуктов на начало смены',
+        editable=False,
+        null=True,
+        )
+    end_delta_vol_of_prod = models.FloatField(
+        'Дельта объёмов продуктов на конец смены',
+        editable=False,
+        null=True,
+        )
 
     class Meta:
         verbose_name = 'Смена'
         verbose_name_plural = 'Смены'
+
+    def __str__(self):
+        return f'Принявшая смену с {self.date_of_beginning}'
 
 
 class Sale(models.Model):
@@ -180,7 +212,10 @@ class Sale(models.Model):
         'Объём',
         validators=[validate_positive],
         )
-    date_of_delivery = models.DateTimeField('Дата и время продажи',)
+    date_of_delivery = models.DateTimeField(
+        'Дата и время продажи',
+        auto_now_add=True
+        )
     shift = models.ForeignKey(
         Shift,
         on_delete=models.CASCADE,

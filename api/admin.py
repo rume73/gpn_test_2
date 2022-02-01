@@ -5,7 +5,7 @@ from .models import Batch, Employee, Provider, Product, Reservoir, Shift, Sale
 
 class BatchAdmin(admin.ModelAdmin):
     list_display = ('pk', '__str__',)
-    readonly_fields = ('density',)
+    readonly_fields = ('density', 'shift_accepted')
     search_fields = ('provider', 'shift_accepted',)
     empty_value_display = '-пусто-'
 
@@ -36,7 +36,9 @@ class ReservoirAdmin(admin.ModelAdmin):
 
 
 class ShiftAdmin(admin.ModelAdmin):
-    list_display = ('pk', 'date_of_delivery')
+    list_display = ('pk', '__str__')
+    search_fields = ('name',)
+    readonly_fields = ('end_date', )
     empty_value_display = '-пусто-'
 
 
