@@ -74,6 +74,14 @@ class ShiftCreateSerializer(serializers.ModelSerializer):
         fields = ('id', 'batch', 'employees', 'date_of_beginning', 'end_date',
                   'begin_vol_of_prod', 'end_delta_vol_of_prod',)
 
+    def to_representation(self, instance):
+        return ShiftSerializer(
+            instance,
+            context={
+                'request': self.context.get('request')
+            }
+        ).data
+
 
 class ShowShiftInSale(serializers.ModelSerializer):
     employees = serializers.SerializerMethodField()

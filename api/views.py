@@ -39,7 +39,7 @@ class ShiftViewSet(ListCreateRetrieveViewSet):
             batch = get_object_or_404(Batch, id=self.request.data.get('batch'))
             batch.shift_accepted = self.request.data.get('id')
             batch.save()
-            serializer.save()
+            serializer.save(batch=batch)
 
 
 class SaleViewSet(ListCreateRetrieveDestroyViewSet):
