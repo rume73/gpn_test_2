@@ -1,4 +1,3 @@
-from django.db import transaction
 from rest_framework import serializers
 
 from .models import Shift, Sale, Batch, Employee, Reservoir, Product, Provider
@@ -48,7 +47,7 @@ class BatchSerializer(serializers.ModelSerializer):
 class ShiftSerializer(serializers.ModelSerializer):
     batch = BatchSerializer(read_only=True,)
     employees = serializers.SerializerMethodField()
-    is_current_shift  = serializers.SerializerMethodField()
+    is_current_shift = serializers.SerializerMethodField()
 
     class Meta:
         model = Shift
@@ -83,7 +82,7 @@ class ShowShiftInSale(serializers.ModelSerializer):
     class Meta:
         model = Shift
         fields = ('shift_id', 'employees', 'date_of_beginning')
-    
+
     def get_employees(self, obj):
         qs = obj.employees.all()
         return EmployeeSerializer(qs, many=True).data

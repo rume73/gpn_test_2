@@ -1,7 +1,7 @@
 from datetime import datetime
 from rest_framework.generics import get_object_or_404
 
-from .models import Batch, Employee, Provider, Product, Reservoir, Shift, Sale
+from .models import Batch, Shift, Sale
 from .serializers import (
     ShiftSerializer,
     SaleSerializer,
@@ -21,19 +21,25 @@ class ShiftViewSet(ListCreateRetrieveViewSet):
     def get_serializer_class(self):
         if self.request.method in ('POST',):
             return ShiftCreateSerializer
-        return  ShiftSerializer
-    
+        return ShiftSerializer
+
     def perform_create(self, serializer):
         if len(Shift.objects.all()) != 0:
             last_object = Shift.objects.latest('date_of_beginning')
             last_object.end_date = datetime.now()
+            current_volume = last_object.current_volume
             last_object.save()
-        serializer.save()
-        batch = get_object_or_404(Batch, id=self.request.data.get('batch'))
-        batch.shift_accepted = self.request.data.get('id')
-        begin_vol_of_prod = self.request.data.get('begin_vol_of_prod')
-        batch.save()
-        serializer.save(begin_vol_of_prod=batch.volume)
+        else:
+            current_volume = 0.0
+        serializer.save(
+            begin_vol_of_prod=current_volume,
+            current_volume=current_volume,
+            )
+        if len(Batch.objects.all()) != 0:
+            batch = get_object_or_404(Batch, id=self.request.data.get('batch'))
+            batch.shift_accepted = self.request.data.get('id')
+            batch.save()
+            serializer.save()
 
 
 class SaleViewSet(ListCreateRetrieveDestroyViewSet):
@@ -43,4 +49,4 @@ class SaleViewSet(ListCreateRetrieveDestroyViewSet):
     def get_serializer_class(self):
         if self.request.method in ('POST',):
             return SaleCreateSerializer
-        return  SaleSerializer
+        return SaleSerializer

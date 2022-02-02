@@ -89,6 +89,8 @@ class Batch(models.Model):
     shift_accepted = models.PositiveIntegerField(
         'Принявшая смена',
         editable=False,
+        null=True,
+        blank=True,
         )
 
     class Meta:
@@ -97,6 +99,7 @@ class Batch(models.Model):
 
     @property
     def get_shift_accepted(self):
+        """Присвоение партии текущей смене"""
         if len(Shift.objects.all()) != 0:
             last_object = Shift.objects.latest('date_of_beginning')
             return last_object.id
@@ -105,13 +108,14 @@ class Batch(models.Model):
 
     @property
     def get_density(self):
+        """Вычисление плотности"""
         return self.volume / self.tonnage
 
     def save(self, *args, **kwargs):
         self.shift_accepted = self.get_shift_accepted
         self.density = self.get_density
         super(Batch, self).save(*args, **kwargs)
-    
+
     def __str__(self):
         return f'Номер {self.number}'
 
@@ -153,6 +157,7 @@ class Employee(models.Model):
 
     @property
     def get_experience(self):
+        """Вычисление стажа работы сотрудника"""
         if self.date_of_dismissal is None:
             return relativedelta(date.today(), self.date_of_employment).years
         else:
@@ -177,9 +182,10 @@ class Shift(models.Model):
         )
     batch = models.ForeignKey(
         Batch,
-        on_delete=models.CASCADE,
+        on_delete=models.SET_NULL,
         related_name='shifts',
         verbose_name='Партия',
+        null=True,
         )
     date_of_beginning = models.DateTimeField(
         'Дата и время начала смены',

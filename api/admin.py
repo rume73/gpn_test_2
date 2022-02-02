@@ -39,7 +39,7 @@ class ShiftAdmin(admin.ModelAdmin):
     list_display = ('pk', '__str__')
     search_fields = ('name',)
     readonly_fields = ('end_date', 'begin_vol_of_prod',
-                       'end_delta_vol_of_prod', 'current_volume',)
+                       'end_delta_vol_of_prod',)
     empty_value_display = '-пусто-'
 
 
