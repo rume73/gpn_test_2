@@ -1,4 +1,5 @@
 from datetime import datetime
+from rest_framework.generics import get_object_or_404
 
 from .models import Batch, Employee, Provider, Product, Reservoir, Shift, Sale
 from .serializers import (
@@ -28,6 +29,11 @@ class ShiftViewSet(ListCreateRetrieveViewSet):
             last_object.end_date = datetime.now()
             last_object.save()
         serializer.save()
+        batch = get_object_or_404(Batch, id=self.request.data.get('batch'))
+        batch.shift_accepted = self.request.data.get('id')
+        begin_vol_of_prod = self.request.data.get('begin_vol_of_prod')
+        batch.save()
+        serializer.save(begin_vol_of_prod=batch.volume)
 
 
 class SaleViewSet(ListCreateRetrieveDestroyViewSet):

@@ -97,9 +97,11 @@ class Batch(models.Model):
 
     @property
     def get_shift_accepted(self):
-        last_object = Shift.objects.latest('date_of_beginning')
-        print(f'Что на выходе {last_object}')
-        return last_object.id
+        if len(Shift.objects.all()) != 0:
+            last_object = Shift.objects.latest('date_of_beginning')
+            return last_object.id
+        else:
+            return None
 
     @property
     def get_density(self):
@@ -187,6 +189,11 @@ class Shift(models.Model):
         'Дата и время конца смены',
         blank=True,
         null=True
+        )
+    current_volume = models.FloatField(
+        'Фактический объём продуктов у смены',
+        editable=False,
+        null=True,
         )
     begin_vol_of_prod = models.FloatField(
         'Объем продуктов на начало смены',
