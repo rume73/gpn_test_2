@@ -46,7 +46,7 @@ class BatchSerializer(serializers.ModelSerializer):
 
 class ShiftSerializer(serializers.ModelSerializer):
     batch = BatchSerializer(read_only=True,)
-    employees = serializers.SerializerMethodField()
+    employees = EmployeeSerializer(many=True)
     is_current_shift = serializers.SerializerMethodField()
 
     class Meta:
@@ -54,10 +54,6 @@ class ShiftSerializer(serializers.ModelSerializer):
         fields = ('id', 'batch', 'employees', 'date_of_beginning', 'end_date',
                   'begin_vol_of_prod', 'end_delta_vol_of_prod',
                   'is_current_shift',)
-
-    def get_employees(self, obj):
-        qs = obj.employees.all()
-        return EmployeeSerializer(qs, many=True).data
 
     def get_is_current_shift(self, obj):
         if obj.end_date is None:
@@ -67,12 +63,10 @@ class ShiftSerializer(serializers.ModelSerializer):
 
 
 class ShiftCreateSerializer(serializers.ModelSerializer):
-    end_date = serializers.ReadOnlyField()
 
     class Meta:
         model = Shift
-        fields = ('id', 'batch', 'employees', 'date_of_beginning', 'end_date',
-                  'begin_vol_of_prod', 'end_delta_vol_of_prod',)
+        fields = ('batch', 'employees',)
 
     def to_representation(self, instance):
         return ShiftSerializer(
@@ -84,16 +78,12 @@ class ShiftCreateSerializer(serializers.ModelSerializer):
 
 
 class ShowShiftInSale(serializers.ModelSerializer):
-    employees = serializers.SerializerMethodField()
+    employees = EmployeeSerializer(many=True)
     shift_id = serializers.ReadOnlyField(source='id',)
 
     class Meta:
         model = Shift
         fields = ('shift_id', 'employees', 'date_of_beginning')
-
-    def get_employees(self, obj):
-        qs = obj.employees.all()
-        return EmployeeSerializer(qs, many=True).data
 
 
 class SaleSerializer(serializers.ModelSerializer):

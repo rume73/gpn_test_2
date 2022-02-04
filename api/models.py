@@ -1,7 +1,7 @@
+from django.core.exceptions import ObjectDoesNotExist
 from django.db import models
 from dateutil.relativedelta import relativedelta
 from datetime import date
-from .validators import validate_positive
 
 
 GENDER_CHOICES = (
@@ -12,10 +12,7 @@ GENDER_CHOICES = (
 
 class Product(models.Model):
     name = models.CharField('Наименование продукта', max_length=200,)
-    current_volume = models.PositiveIntegerField(
-        'Текущий объем',
-        validators=[validate_positive],
-        )
+    current_volume = models.PositiveIntegerField('Текущий объем',)
 
     class Meta:
         verbose_name = 'Продукт'
@@ -27,10 +24,7 @@ class Product(models.Model):
 
 class Reservoir(models.Model):
     name = models.CharField('Наименование резервуара', max_length=200,)
-    capacity = models.PositiveIntegerField(
-        'Ёмкость',
-        validators=[validate_positive],
-        )
+    capacity = models.PositiveIntegerField('Ёмкость',)
 
     class Meta:
         verbose_name = 'Резервуар'
@@ -57,35 +51,27 @@ class Batch(models.Model):
         on_delete=models.CASCADE,
         related_name='batches',
         verbose_name='Продукт',)
-    number = models.PositiveIntegerField(
-        'Номер',
-        validators=[validate_positive],
-        )
+    number = models.PositiveIntegerField('Номер',)
     date_of_delivery = models.DateTimeField(
         'Дата и время поставки',
         auto_now_add=True,
         )
-    tonnage = models.PositiveIntegerField(
-        'Тоннаж',
-        validators=[validate_positive],
-        )
+    tonnage = models.PositiveIntegerField('Тоннаж',)
     provider = models.ForeignKey(
         Provider,
         on_delete=models.CASCADE,
         related_name='batches',
         verbose_name='Поставщик',
         )
-    volume = models.PositiveIntegerField(
-        'Объём',
-        validators=[validate_positive],
-        )
+    volume = models.PositiveIntegerField('Объём',)
     reservoir = models.ForeignKey(
         Reservoir,
         on_delete=models.CASCADE,
         related_name='batches',
         verbose_name='Резервуар',
         )
-    density = models.FloatField('Плотность', editable=False)
+    _density = models.FloatField('Плотность', db_column='density',
+                                 editable=False,)
     shift_accepted = models.PositiveIntegerField(
         'Принявшая смена',
         editable=False,
@@ -98,22 +84,21 @@ class Batch(models.Model):
         verbose_name_plural = 'Партии'
 
     @property
-    def get_shift_accepted(self):
-        """Присвоение партии текущей смене"""
-        if len(Shift.objects.all()) != 0:
-            last_object = Shift.objects.latest('date_of_beginning')
-            return last_object.id
-        else:
-            return None
+    def density(self):
+        return self._density
 
-    @property
-    def get_density(self):
+    @density.setter
+    def density(self, value):
         """Вычисление плотности"""
-        return self.volume / self.tonnage
+        self._density = self.volume / self.tonnage
 
     def save(self, *args, **kwargs):
-        self.shift_accepted = self.get_shift_accepted
-        self.density = self.get_density
+        self.density = self.density
+        try:
+            last_object = Shift.objects.latest('date_of_beginning')
+            self.shift_accepted = last_object.id
+        except ObjectDoesNotExist:
+            self.shift_accepted = None
         super(Batch, self).save(*args, **kwargs)
 
     def __str__(self):
@@ -148,7 +133,11 @@ class Employee(models.Model):
         choices=GENDER_CHOICES,
         default="мужской",
         )
-    experience = models.IntegerField('Опыт', editable=False)
+    _experience = models.IntegerField(
+        'Опыт',
+        db_column='experience',
+        editable=False,
+        )
     birth_date = models.DateField('Дата рождения',)
 
     class Meta:
@@ -156,18 +145,19 @@ class Employee(models.Model):
         verbose_name_plural = 'Сотрудники'
 
     @property
-    def get_experience(self):
+    def experience(self):
+        return self._experience
+
+    @experience.setter
+    def experience(self, value):
         """Вычисление стажа работы сотрудника"""
-        if self.date_of_dismissal is None:
-            return relativedelta(date.today(), self.date_of_employment).years
-        else:
-            return relativedelta(
-                self.date_of_dismissal,
-                self.date_of_employment
-                ).years
+        self._experience = relativedelta(
+            self.date_of_dismissal or date.today(),
+            self.date_of_employment
+            ).years
 
     def save(self, *args, **kwargs):
-        self.experience = self.get_experience
+        self.experience = self.experience
         super(Employee, self).save(*args, **kwargs)
 
     def __str__(self):
@@ -221,10 +211,7 @@ class Shift(models.Model):
 
 
 class Sale(models.Model):
-    volume = models.PositiveIntegerField(
-        'Объём',
-        validators=[validate_positive],
-        )
+    volume = models.PositiveIntegerField('Объём',)
     date_of_delivery = models.DateTimeField(
         'Дата и время продажи',
         auto_now_add=True
